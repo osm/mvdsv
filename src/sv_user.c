@@ -42,7 +42,7 @@ cvar_t	sv_kickuserinfospamcount = {"sv_kickuserinfospamcount", "300"};
 cvar_t	sv_maxuploadsize = {"sv_maxuploadsize", "1048576"};
 
 #ifdef FTE_PEXT_CHUNKEDDOWNLOADS
-cvar_t  sv_downloadchunksperframe = {"sv_downloadchunksperframe", "2"};
+cvar_t  sv_downloadchunksperframe = {"sv_downloadchunksperframe", "15"};
 #endif
 
 #ifdef FTE_PEXT2_VOICECHAT
@@ -1112,6 +1112,7 @@ void SV_NextChunkedDownload(int chunknum, int percent, int chunked_download_numb
 #define CHUNKSIZE 1024
 	char buffer[CHUNKSIZE];
 	int i;
+	int maxchunks = bound(1, (int)sv_downloadchunksperframe.value, 30);
 
 	sv_client->file_percent = bound(0, percent, 100); //bliP: file percent
 
@@ -1121,13 +1122,9 @@ void SV_NextChunkedDownload(int chunknum, int percent, int chunked_download_numb
 		return;
 	}
 
-	if (sv_client->download_chunks_perframe)
-	{
-		int maxchunks = bound(1, (int)sv_downloadchunksperframe.value, 4);
-		// too much requests or client sent something wrong
-		if (sv_client->download_chunks_perframe >= maxchunks || chunked_download_number < 1)
-			return;
-	}
+	// Check if too much requests or client sent something wrong
+	if (sv_client->download_chunks_perframe >= maxchunks || chunked_download_number < 1)
+		return;
 
 	if (!sv_client->download_chunks_perframe) // ignore "rate" if not first packet per frame
 		if (sv_client->datagram.cursize + CHUNKSIZE+5+50 > sv_client->datagram.maxsize)
@@ -4317,6 +4314,7 @@ static void SV_DebugClientSideWeaponScript(client_t* cl)
 	SV_DebugWriteWeaponScript(playernum, false, items, shells, nails, rockets, cells, choice, weaponlist);
 }
 
+#ifdef MVD_PEXT1_SERVERSIDEWEAPON
 static void SV_DebugServerSideWeaponInstruction(client_t* cl)
 {
 	if (sv_debug_weapons.value >= 1) {
@@ -4352,6 +4350,7 @@ static void SV_DebugServerSideWeaponInstruction(client_t* cl)
 		}
 	}
 }
+#endif
 
 static void SV_DebugServerSideWeaponScript(client_t* cl, int best_impulse)
 {
