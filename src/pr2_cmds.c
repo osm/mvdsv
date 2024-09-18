@@ -1994,7 +1994,7 @@ intptr_t PF2_SetExtField(intptr_t *args)
 {
 	edict_t *e = EDICT_NUM(NUM_FOR_GAME_EDICT(VMA(1)));
 
-	int i = QVM_FindExtField(args[2]);
+	int i = QVM_FindExtField((char*)args[2]);
 	int value = (int)(args[3]);
 
 	if (i < 0)
@@ -2008,7 +2008,7 @@ intptr_t PF2_GetExtField(intptr_t *args)
 {
 	edict_t *e = EDICT_NUM(NUM_FOR_GAME_EDICT(VMA(1)));
 
-	int i = QVM_FindExtField(args[2]);
+	int i = QVM_FindExtField((char*)args[2]);
 
 	if (i < 0)
 		return 0;
