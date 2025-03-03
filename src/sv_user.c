@@ -390,6 +390,13 @@ static void Cmd_New_f (void)
 	}
 #endif
 
+#ifdef FTE_PEXT_CSQC
+	if (sv_client->fteprotocolextensions & FTE_PEXT_CSQC) {
+		SV_ClientPrintf(sv_client, 2, "\n\nENABLING CSQC FOR YOU!\nYOU'RE WELCOME\n");
+		sv_client->csqcactive = true;
+	}
+#endif
+
 	//NOTE:  This doesn't go through ClientReliableWrite since it's before the user
 	//spawns.  These functions are written to not overflow
 	if (sv_client->num_backbuf)
@@ -3087,7 +3094,14 @@ void SV_Voice_UnmuteAll_f(void)
 #ifdef FTE_PEXT_CSQC
 void SV_EnableClientsCSQC(void)
 {
+	size_t e;
+
 	sv_client->csqcactive = true;
+
+	//if the csqc has just restarted, its probably going to want us to resend all csqc ents from scratch because of all the setup it might do.
+	for (e = 1; e < MAX_EDICTS; e++)
+		if (sv_client->csqcentityscope[e] & SCOPE_WANTSEND)
+			sv_client->csqcentitysendflags[e] = 0xFFFFFF;
 }
 
 void SV_DisableClientsCSQC(void)
@@ -3526,6 +3540,38 @@ void SV_PreRunCmd(void)
 {
 	memset(playertouch, 0, sizeof(playertouch));
 }
+
+#ifdef MVD_PEXT1_SIMPLEPROJECTILE
+/*
+===========
+CSQC Stuff, for now just SimpleProjectiles
+===========
+*/
+qbool SV_FrameLost(int framenum)
+{
+	if (framenum <= sv_client->csqc_framenum)
+	{
+		EntityFrameCSQC_LostFrame(sv_client, framenum);
+		return true;
+	}
+
+	return false;
+}
+
+static void SV_FrameAck(int framenum)
+{
+	/*
+	int i;
+	// scan for packets made obsolete by this ack and delete them
+	for (i = 0; i < ENTITYFRAME5_MAXPACKETLOGS; i++)
+		if (d->packetlog[i].packetnumber <= framenum)
+			d->packetlog[i].packetnumber = 0;
+	*/
+}
+
+
+
+#endif
 
 /*
 ===========
@@ -4380,6 +4426,7 @@ void SV_ExecuteClientMessage (client_t *cl)
 	int             checksumIndex;
 	byte            checksum, calculatedChecksum;
 	int             seq_hash;
+	int		num;
 
 #ifdef MVD_PEXT1_DEBUG
 	int             antilag_players_present = 0;
@@ -4496,6 +4543,16 @@ void SV_ExecuteClientMessage (client_t *cl)
 	sv_player = sv_client->edict;
 
 	seq_hash = cl->netchan.incoming_sequence;
+
+#if defined(MVD_PEXT1_SIMPLEPROJECTILE) || defined(FTE_PEXT_CSQC)
+	for (i = sv_client->csqc_latestverified + 1; i < cl->netchan.incoming_acknowledged; i++)
+	{
+		if (!SV_FrameLost(i))
+			break;
+	}
+	SV_FrameAck(cl->netchan.incoming_acknowledged);
+	sv_client->csqc_latestverified = cl->netchan.incoming_acknowledged;
+#endif
 
 	// mark time so clients will know how much to predict
 	// other players
@@ -4696,6 +4753,23 @@ void SV_ExecuteClientMessage (client_t *cl)
 #ifdef FTE_PEXT2_VOICECHAT
 		case clc_voicechat:
 			SV_VoiceReadPacket();
+			break;
+#endif
+
+#ifdef MVD_PEXT1_SIMPLEPROJECTILE
+		case clc_ackframe:
+			num = MSG_ReadLong();
+
+
+			/*
+			for (i = sv_client->csqc_latestverified + 1; i < num; i++)
+			{
+				if (!SV_FrameLost(i))
+					break;
+			}
+			SV_FrameAck(num);
+			sv_client->csqc_latestverified = num;
+			//*/
 			break;
 #endif
 		}

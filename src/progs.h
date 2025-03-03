@@ -68,7 +68,8 @@ typedef struct
 	float	alpha;			// 0 = opaque, 1 = opaque, 0 < x < 1 translucent
 	float	colourmod[3];	// r,g,b [0.0 .. 1.0], > 1 overbright
 #ifdef FTE_PEXT_CSQC
-	int		sendentity;		// Trigger GAME_CSQCSEND indirection
+	int		SendEntity;		// Trigger GAME_CSQCSEND indirection
+	int		sendflags;		//
 	float	pvsflags;		// CSQC pvsflags
 #endif
 } ext_entvars_t;
@@ -194,6 +195,12 @@ extern int fofs_trackent;
 extern int fofs_visibility;
 extern int fofs_hide_players;
 extern int fofs_teleported;
+extern int fofs_client_time;
+extern int fofs_attack_finished;
+extern int fofs_client_nextthink;
+extern int fofs_client_thinkindex;
+extern int fofs_client_ping;
+extern int fofs_client_predflags;
 
 #define EdictFieldFloat(ed, fieldoffset) ((eval_t *)((byte *)(ed)->v + (fieldoffset)))->_float
 #define EdictFieldVector(ed, fieldoffset) ((eval_t *)((byte *)(ed)->v + (fieldoffset)))->vector

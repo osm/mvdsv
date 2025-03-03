@@ -159,6 +159,13 @@ typedef struct
 	string_t	noise3;
 } entvars_t;
 
+#define PVSF_IGNOREPVS	3
+
+#define svextqcfields \
+	comfieldfunction(SendEntity, ".float(entity playerent, float changedflags)")/*FTE_PEXT_CSQC*/\
+	comfieldfloat(sendflags)/*FTE_PEXT_CSQC*/\
+	comfieldfloat(pvsflags)/*FTE_PEXT_CSQC*/
+
 #define PROGHEADER_CRC 54730
 
 #endif /* !__PROGDEFS_H__ */
