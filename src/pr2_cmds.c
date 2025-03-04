@@ -1999,103 +1999,8 @@ intptr_t PF2_FS_GetFileList(char *path, char *ext,
 	return numfiles;
 }
 
-/*
-qvmextensions
-*/
-static int QVM_FindExtField(char *fname)
-{
-	ext_entvars_t *xv = NULL;
-#define comfieldfloat(name) if (!strcmp(fname, #name)) return ((int*)&xv->name - (int*)xv);
-#define comfieldint(name) if (!strcmp(fname, #name)) return ((int*)&xv->name - (int*)xv);
-#define comfieldvector(name) if (!strcmp(fname, #name)) return ((int*)&xv->name - (int*)xv);
-#define comfieldentity(name) if (!strcmp(fname, #name)) return ((int*)&xv->name - (int*)xv);
-#define comfieldstring(name) if (!strcmp(fname, #name)) return ((int*)&xv->name - (int*)xv);
-#define comfieldfunction(name, typestr) if (!strcmp(fname, #name)) return ((int*)&xv->name - (int*)xv);
-	svextqcfields
-#undef comfieldfloat
-#undef comfieldint
-#undef comfieldvector
-#undef comfieldentity
-#undef comfieldstring
-#undef comfieldfunction
-	return -1;	//unsupported
-}
-
-intptr_t PF2_SetExtField(intptr_t *args)
-{
-	edict_t *e = EDICT_NUM(NUM_FOR_GAME_EDICT(VMA(1)));
-
-	int i = QVM_FindExtField((char*)args[2]);
-	int value = (int)(args[3]);
-
-	if (i < 0)
-		return 0;
-
-	// Map 'i' to the corresponding field in ext_entvars_t
-	switch (i)
-	{
-		case 1:
-			e->xv.alpha = (float)value;
-			break;
-		case 2:
-			e->xv.colourmod[0] = (float)value;
-			break;
-		case 3:
-			e->xv.colourmod[1] = (float)value;
-			break;
-		case 4:
-			e->xv.colourmod[2] = (float)value;
-			break;
-		case 5:
-			e->xv.SendEntity = value;
-			break;
-		case 6:
-			e->xv.sendflags = value;
-			break;
-		case 7:
-			e->xv.pvsflags = (float)value;
-			break;
-		default:
-			return 0;  // Invalid field index
-	}
-//	((int*)e->xv)[i] = value; // This worked instead of the switch when xv was a pointer
-	return value;
-}
-
-intptr_t PF2_GetExtField(intptr_t *args)
-{
-	edict_t *e = EDICT_NUM(NUM_FOR_GAME_EDICT(VMA(1)));
-
-	int i = QVM_FindExtField((char*)args[2]);
-
-	if (i < 0)
-		return 0;
-
-	// Map 'i' to the corresponding field in ext_entvars_t
-	switch (i)
-	{
-		case 1:
-			return (intptr_t)e->xv.alpha;
-		case 2:
-			return (intptr_t)e->xv.colourmod[0];
-		case 3:
-			return (intptr_t)e->xv.colourmod[1];
-		case 4:
-			return (intptr_t)e->xv.colourmod[2];
-		case 5:
-			return e->xv.SendEntity;
-		case 6:
-			return e->xv.sendflags;
-		case 7:
-			return (intptr_t)e->xv.pvsflags;
-		default:
-			return 0; // Invalid field index
-	}
-//	return ((int*)e->xv)[i]; // This worked instead of the switch when xv was a pointer
-}
-
 #ifdef FTE_PEXT_CSQC
-intptr_t PF2_SetSendNeeded(intptr_t *args)
+intptr_t EXT_SetSendNeeded(intptr_t *args)
 {
 	unsigned int subject = args[1];
 	int fl = args[2];
@@ -2106,6 +2011,7 @@ intptr_t PF2_SetSendNeeded(intptr_t *args)
 		for (to = 0; to < MAX_CLIENTS; to++)
 			svs.clients[to].csqcentitysendflags[subject] |= fl;
 	}
+
 	else
 	{
 		to--;
@@ -2114,31 +2020,6 @@ intptr_t PF2_SetSendNeeded(intptr_t *args)
 		else
 			svs.clients[to].csqcentitysendflags[subject] |= fl;
 	}
-	return 0;
-}
-#endif
-
-typedef intptr_t(*traps_t)(intptr_t *args);
-traps_t extended_traps[512];
-
-struct
-{
-	char *extname;
-	traps_t trap;
-} qvmextensions[] =
-{
-	{"SetExtField",			PF2_SetExtField},
-	{"GetExtField",			PF2_GetExtField},
-#ifdef FTE_PEXT_CSQC
-	{"setsendneeded",		PF2_SetSendNeeded},
-#endif
-	{NULL, NULL}
-};
-
-#ifdef FTE_PEXT_CSQC
-intptr_t EXT_SetSendNeeded(intptr_t *args)
-{
-//	PR2_RunError("SetSendNeeded not implemented yet.");
 	return 0;
 }
 #endif
@@ -2262,19 +2143,6 @@ intptr_t PF2_Map_Extension(char *name, int mapto)
 			return -2;
 		}
 		return -1;
-	}
-	Con_Printf("Map request for %s\n", name);
-
-
-	for (i = 0; qvmextensions[i].extname; i++)
-	{
-		if (!strcasecmp(name, qvmextensions[i].extname))
-		{
-			Con_Printf("Mapping '%s' to extended_traps[%i]\n", name, mapto);
-
-			extended_traps[mapto] = qvmextensions[i].trap;
-			return mapto;
-		}
 	}
 	for (i = 0; i < ARRAY_LEN(ext_syscalls); i++)
 	{
@@ -2996,8 +2864,6 @@ intptr_t PR2_GameSystemCalls(intptr_t *args) {
 		PF2_VisibleTo(args[1], args[2], args[3], VMA(4));
 		return 0;
 	default:
-		if (extended_traps[args[0]] != NULL)
-			return extended_traps[args[0]](args);
 		if (args[0] >= _G__LASTAPI && ext_syscall_tbl[args[0] - G_EXTENSIONS_FIRST])
 		{
 			return ext_syscall_tbl[args[0] - G_EXTENSIONS_FIRST](args);
