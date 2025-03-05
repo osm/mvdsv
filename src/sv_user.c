@@ -3558,17 +3558,6 @@ qbool SV_FrameLost(int framenum)
 	return false;
 }
 
-static void SV_FrameAck(int framenum)
-{
-	/*
-	int i;
-	// scan for packets made obsolete by this ack and delete them
-	for (i = 0; i < ENTITYFRAME5_MAXPACKETLOGS; i++)
-		if (d->packetlog[i].packetnumber <= framenum)
-			d->packetlog[i].packetnumber = 0;
-	*/
-}
-
 
 
 #endif
@@ -4550,7 +4539,6 @@ void SV_ExecuteClientMessage (client_t *cl)
 		if (!SV_FrameLost(i))
 			break;
 	}
-	SV_FrameAck(cl->netchan.incoming_acknowledged);
 	sv_client->csqc_latestverified = cl->netchan.incoming_acknowledged;
 #endif
 
@@ -4759,17 +4747,6 @@ void SV_ExecuteClientMessage (client_t *cl)
 #ifdef MVD_PEXT1_SIMPLEPROJECTILE
 		case clc_ackframe:
 			num = MSG_ReadLong();
-
-
-			/*
-			for (i = sv_client->csqc_latestverified + 1; i < num; i++)
-			{
-				if (!SV_FrameLost(i))
-					break;
-			}
-			SV_FrameAck(num);
-			sv_client->csqc_latestverified = num;
-			//*/
 			break;
 #endif
 		}
