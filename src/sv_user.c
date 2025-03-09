@@ -25,6 +25,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 static void SV_ClientDownloadComplete(client_t* cl);
 
+#ifdef MVD_PEXT1_SIMPLEPROJECTILE
+extern void EntityFrameCSQC_LostFrame(client_t *client, int framenum);
+#endif
+
 edict_t	*sv_player;
 
 usercmd_t	cmd;
