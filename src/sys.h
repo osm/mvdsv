@@ -149,4 +149,19 @@ void *Sys_DLProc (DL_t dl, const char *name);
 
 int  Sys_CreateThread(DWORD (WINAPI *func)(void *), void *param);
 
+
+typedef struct
+{
+#ifdef _WIN32
+	CRITICAL_SECTION lock;
+#else
+	pthread_mutex_t lock;
+#endif
+} mutex_t;
+
+void Sys_MutexInit(mutex_t *l);
+void Sys_MutexUnlock(mutex_t *l);
+qbool Sys_MutexTryLock(mutex_t *m);
+qbool Sys_MutexTryLockWithTimeout(mutex_t *m, unsigned long timeout_ms);
+
 #endif /* !__SYS_H__ */
