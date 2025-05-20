@@ -3393,6 +3393,7 @@ static ucmd_t ucmds[] =
 	{"logout", Cmd_Logout_f, false},
 #endif
 
+	{"lastbroadcasts", SV_BroadcastPrintLog_f, false},
 	{NULL, NULL}
 };
 
