@@ -2300,6 +2300,7 @@ char *shortinfotbl[] =
 	"gender",
 	"*auth",
 	"*flag",
+	"*skill",
 	//"*client",
 	//"*spectator",
 	//"*VIP",
