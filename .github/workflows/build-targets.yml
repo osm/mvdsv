@@ -1,72 +1,85 @@
 name: build targets
-on: [push,pull_request]
+on: [push, pull_request]
 jobs:
   build:
     runs-on: ${{ matrix.base-image }}
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
-       target: [linux-amd64, linux-i686, linux-armhf, linux-aarch64, windows-x64, windows-x86]
-       include:
-         - target: linux-amd64
-           os: linux
-           arch: amd64
-           base-image: ubuntu-latest
-           build-image: amd64/debian:stable
-           ext: ""
-         - target: linux-i686
-           os: linux
-           arch: i386
-           base-image: ubuntu-latest
-           build-image: i386/debian:stable
-           ext: ""
-         - target: linux-armhf
-           os: linux
-           arch: arm/v7
-           base-image: ubuntu-latest
-           build-image: arm32v7/debian:stable
-           ext: ""
-         - target: linux-aarch64
-           os: linux
-           arch: arm64
-           base-image: ubuntu-latest
-           build-image: arm64v8/debian:stable
-           ext: ""
-         - target: windows-x64
-           os: windows
-           arch: x64
-           base-image: ubuntu-latest
-           ext: ".exe"
-         - target: windows-x86
-           os: windows
-           arch: x86
-           base-image: ubuntu-latest
-           ext: ".exe"
+        target:
+          - freebsd-amd64
+          - linux-amd64
+          - linux-arm64
+          - windows-amd64
+        include:
+          - target: freebsd-amd64
+            arch: amd64
+            base-image: ubuntu-latest
+            os: freebsd
+          - target: linux-amd64
+            arch: amd64
+            base-image: ubuntu-latest
+            build-image: amd64/debian:stable
+            os: linux
+          - target: linux-arm64
+            arch: arm64
+            base-image: ubuntu-latest
+            build-image: arm64v8/debian:stable
+            os: linux
+          - target: windows-amd64
+            arch: x64
+            base-image: ubuntu-latest
+            ext: ".exe"
+            os: windows
+
+    env:
+      BRANCH_NAME: ${{ github.ref_name }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           submodules: true
 
+      - name: FreeBSD Build
+        if: matrix.os == 'freebsd'
+        uses: vmactions/freebsd-vm@v1
+        with:
+          release: "14.2"
+          usesh: true
+          prepare: |
+            pkg install -y bash cmake git
+          run: |
+            git config --global --add safe.directory /home/runner/work/mvdsv/mvdsv
+            ./build_cmake.sh ${{ matrix.target }}
+
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
         if: matrix.os == 'linux'
+        uses: docker/setup-qemu-action@v3
 
-      - name: Prepare Build Environemnt
-        shell: bash
-        run: sudo apt-get update -qq && sudo apt-get -qq --no-install-recommends install build-essential cmake gcc-mingw-w64-x86-64 gcc-mingw-w64-i686
-        if: matrix.os == 'windows'
-
-      - name: Build
+      - name: Linux Build
+        if: matrix.os == 'linux'
         run: |
-             if ${{ matrix.os  == 'linux' }}; then
-               docker run --platform linux/${{ matrix.arch }} --net=host --rm --device /dev/fuse -v $PWD:/mvdsv -w /mvdsv ${{ matrix.build-image }} bash -c -e '
-                 set -e
-                 apt-get -qq update
-                 apt-get -qq --no-install-recommends install cmake build-essential libcurl4-openssl-dev ninja-build
-                 ./build_cmake.sh ${{ matrix.target }}
-                 chown -R '$(id -u ${USER})':'$(id -g ${USER})' build/${{ matrix.target }} || exit 3
-               '
-             else
-               ./build_cmake.sh ${{ matrix.target }}
-             fi
+          docker run --platform linux/${{ matrix.arch }} --net=host --rm --device /dev/fuse -v $PWD:/mvdsv -w /mvdsv ${{ matrix.build-image }} bash -c "
+            set -e
+            apt-get -qq update
+            apt-get -qq --no-install-recommends install cmake build-essential libcurl4-openssl-dev ninja-build
+
+            ./build_cmake.sh ${{ matrix.target }}
+            chown -R \$(id -u):\$(id -g) build/${{ matrix.target }}
+          "
+
+      - name: Build Windows
+        if: matrix.os == 'windows'
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get -qq --no-install-recommends install build-essential cmake gcc-mingw-w64-x86-64
+
+          ./build_cmake.sh ${{ matrix.target }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ format('mvdsv{0}-{1}', contains(env.BRANCH_NAME, 'antilag') && format('-{0}', env.BRANCH_NAME) || '', matrix.target) }}
+          path: build/${{ matrix.target }}/mvdsv${{ matrix.ext }}
