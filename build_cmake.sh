@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
 
 # Useful if you willing to stop on first error, also prints what is executed.
 #set -ex
@@ -8,12 +8,11 @@ BUILDDIR="${BUILDDIR:-build}" # Default build dir.
 # Define target platforms, feel free to comment out if you does not require some of it,
 # or you can call this script with plaforms list you willing to build on the command line.
 DEFAULT_PLATFORMS=(
+	freebsd-amd64
 	linux-amd64
-	linux-aarch64
+	linux-arm64
 	linux-armhf
-	linux-i686
-	windows-x64
-	windows-x86
+	windows-amd64
 )
 PLATFORMS=("${@:-${DEFAULT_PLATFORMS[@]}}")
 
