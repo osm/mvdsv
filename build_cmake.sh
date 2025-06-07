@@ -12,6 +12,7 @@ DEFAULT_PLATFORMS=(
 	linux-amd64
 	linux-arm64
 	linux-armhf
+	openbsd-amd64
 	windows-amd64
 )
 PLATFORMS=("${@:-${DEFAULT_PLATFORMS[@]}}")
